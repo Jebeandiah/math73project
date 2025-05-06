@@ -91,8 +91,9 @@ while running:
     for vertice in vertices:
         #renderedvertices = 
         worldpos = numpy.matmul( numpy.matmul(rotation_matrix_x, rotation_matrix_y), vertice-cam_position)
-        projectedpos =(-worldpos[0]*10000/(worldpos[2]*fov)+screen_width/2, worldpos[1]*10000/(worldpos[2]*fov)+screen_height/2)
         if(worldpos[2]>0):
+            projectedpos =(-worldpos[0]*10000/(worldpos[2]*fov)+screen_width/2, worldpos[1]*10000/(worldpos[2]*fov)+screen_height/2)
+
             screen_vertices.append(projectedpos)
 
             pygame.draw.circle(screen, circle_color, projectedpos, 2)
@@ -100,13 +101,13 @@ while running:
             worldpos[2]=0.01
             screen_vertices.append((-worldpos[0]*10000/(worldpos[2]*fov)+screen_width/2, worldpos[1]*10000/(worldpos[2]*fov)+screen_height/2))
         #print(worldpos)
-    for triangle in triangles:
+    for i, triangle in enumerate(triangles):
         edges = [
             (screen_vertices[triangle[0]][0], screen_vertices[triangle[0]][1]),
             (screen_vertices[triangle[1]][0], screen_vertices[triangle[1]][1]),
             (screen_vertices[triangle[2]][0], screen_vertices[triangle[2]][1])
         ]
-        pygame.draw.polygon(screen, (100 , 100, 100 ), edges)
+        pygame.draw.polygon(screen, (255*(i+1)/len(triangles), 100, 100 ), edges)
     #pygame.draw.circle(screen, circle_color, (0, 0+screen_height/2), 2)
 
     pygame.display.update()
