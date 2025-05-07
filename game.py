@@ -21,7 +21,8 @@ cam_angle = [0.,0.,0.]
 cam_position = numpy.array([0.,0.,-5.])
 cam_velocity = numpy.array([0.,0.,0.])
 speed = 3
-dominantplanet =0
+dominantplanet = 0
+
 # colors:
 background_color = (240, 235, 240)
 cube_color = (255, 0, 70)
@@ -30,6 +31,7 @@ isgrounded = False
 playerheight = 2
 running = True
 
+# List of vertices
 vertices = [ 
     [-1, -1,1],
     [1, -1, 1],
@@ -39,13 +41,17 @@ vertices = [
     [1, -1,-1],
     [1, 1, -1],
     [-1, 1,-1]
-            
-            ] 
-triangles = [[0,1,2],#index of vertices in vertices
-             [3,0,2]
-            ]  
-planets =[[[0.,10.,0.], 5., .1]] #planet center, radius, gravity
+] 
+# List of faces using vertex indices
+triangles = [
+    [0,1,2],
+    [3,0,2]
+]  
 
+# List of planets
+planets =[[[0.,10.,0.], 5., .1]] # planet center, radius, gravity
+
+# Standard Rotation matrices
 def xrotmat(angle):
     return [
     [1, 0, 0],
@@ -66,7 +72,7 @@ def zrotmat(angle):
     ]
 
 def checkplanets():
-    strongestforce =0
+    strongestforce = 0
     global cam_velocity
     global isgrounded 
     global dominantplanet
