@@ -81,8 +81,8 @@ def checkplanets():
             cam_velocity = numpy.array([0.,0.,0.])
         else:
             #print(distance)
-            cam_velocity -= force*(cam_position-numpy.array(planet[0]))/fps
-            #None
+            #cam_velocity -= force*(cam_position-numpy.array(planet[0]))/fps
+            ...
         #print(force*(cam_position-numpy.array(planet[0]))/(distance*fps))
         if force>strongestforce: 
             strongestforce = force
@@ -111,29 +111,28 @@ while running:
             running = False
         if event.type == pygame.MOUSEMOTION:
             anglechange=numpy.array(pygame.mouse.get_rel())/fps*sensitivity
-            look_angle[1] = numpy.clip(look_angle[1]+math.radians(anglechange[1]), -math.pi/2.1, math.pi/2.1)
-            player_angle[0]+=math.radians(anglechange[0])
+            look_angle[0] = numpy.clip(look_angle[0]+math.radians(anglechange[1]), -math.pi/2.1, math.pi/2.1)
+            player_angle[1]+=math.radians(anglechange[0])
+            #print(look_angle[0])
             #print(cam_angle)
-    rotation_matrix_x = xrotmat(cam_angle[1])
-    rotation_matrix_y = yrotmat(cam_angle[0])    
+    rotation_matrix_x = xrotmat(cam_angle[0])
+    rotation_matrix_y = yrotmat(cam_angle[1])    
     rotation_matrix_z = zrotmat(cam_angle[2])
-    negrotation_matrix_y = yrotmat(-cam_angle[0])
+    negrotation_matrix_y = yrotmat(-cam_angle[1])
     rotation_matrix_yz = numpy.linalg.matmul(rotation_matrix_y, rotation_matrix_z)
     rotation_matrix_xyz = numpy.linalg.matmul(rotation_matrix_x, rotation_matrix_yz)
 
     #print(player_angle[1])
     
     planetdir = numpy.array(planets[dominantplanet][0]-cam_position)
-    planetxdirnorm = numpy.array([planetdir[2],planetdir[1]])/numpy.linalg.norm(numpy.array([planetdir[2],planetdir[1]]))
-    planetzdirnorm = numpy.array([planetdir[0],planetdir[1]])/numpy.linalg.norm(numpy.array([planetdir[0],planetdir[1]]))
-    #print(planetzdirnorm)
-    #print(numpy.arccos(numpy.clip(numpy.dot( planetzdirnorm,numpy.array([0,1])),-1.0, 1.0)))
-    #print(numpy.arccos(numpy.clip(numpy.dot( planetzdirnorm,numpy.array([0,1])),-1.0, 1.0)))
-    player_angle[1] = numpy.arccos(numpy.clip(numpy.dot( planetxdirnorm,numpy.array([0,1])),-1.0, 1.0))
-    #print()
-    player_angle[2] = numpy.arccos(numpy.clip(numpy.dot( planetzdirnorm,numpy.array([0,1])),-1.0, 1.0))
+
+    #print(planetdir)
+    #player_angle[0] = math.atan2(planetdir[2], planetdir[1])
+    player_angle[2] = -math.atan2(planetdir[0], planetdir[1])
+    #print(player_angle[1])
+    #player_angle[2] = numpy.arccos(numpy.clip(numpy.dot( planetzdirnorm,numpy.array([0,1])),-1.0, 1.0))
     #print(player_angle[2])
-    playerrotation_matrix_xyz = numpy.linalg.matmul(numpy.linalg.matmul(xrotmat(player_angle[1]), negrotation_matrix_y), zrotmat(player_angle[2]))
+    playerrotation_matrix_xyz = numpy.linalg.matmul(numpy.linalg.matmul(xrotmat(player_angle[0]), negrotation_matrix_y), zrotmat(player_angle[2]))
 
     #print(numpy.arccos(numpy.clip(numpy.dot( planetxdirnorm,numpy.array([0,1])),-1.0, 1.0)))
     #print(numpy.arccos(numpy.clip(numpy.dot( numpy.array([0,1]),planetzdirnorm),-1.0, 1.0)))
@@ -141,7 +140,10 @@ while running:
     #print(numpy.arccos(numpy.clip(numpy.dot( numpy.array([0,1]),planetxdirnorm),-1.0, 1.0)))
     #cam_angle = player_angle+look_angle
     #print(player_angle[2])
-    cam_angle = numpy.array(look_angle) -numpy.array(player_angle)
+    cam_angle = numpy.array(look_angle) - numpy.array(player_angle)
+    print(look_angle, end="  ")
+    print(player_angle, end="  ")
+    print(cam_angle)
     #print(numpy.arccos(numpy.clip(numpy.dot( numpy.array([0,1]),planetxdirnorm),-1.0, 1.0)))
     #print(cam_angle[1])
     #print (dominantplanet[0]-cam_position)
@@ -165,7 +167,10 @@ while running:
 
         #print(numpy.matmul(negrotation_matrix_y,input_dir/(numpy.linalg.norm(input_dir)*fps)*speed))
         cam_position+=numpy.matmul(playerrotation_matrix_xyz,input_dir/(numpy.linalg.norm(input_dir)*fps)*speed)
-        print(numpy.matmul(playerrotation_matrix_xyz,input_dir/(numpy.linalg.norm(input_dir))*speed))
+        #cam_position+=input_dir/(numpy.linalg.norm(input_dir)*fps)*speed
+
+        #print(numpy.matmul(playerrotation_matrix_xyz,input_dir/(numpy.linalg.norm(input_dir))*speed))
+        #print(player_angle)
         # cam_position+=input_dir/(numpy.linalg.norm(input_dir)*fps)*speed
     #print(str(cam_position)+" "+str(cam_angle))
     #print(cam_angle)
