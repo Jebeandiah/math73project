@@ -14,8 +14,9 @@ pygame.event.set_grab(True)
 sensitivity = 10
 fps = 240
 fov = 30
-look_angle =[0.,0.,0.]
-player_angle =[0.,0.,0.]
+look_angle = numpy.array([0.,0.,0.])
+player_angle = numpy.array([0.,0.,0.])
+
 
 cam_angle = [0.,0.,0.]
 cam_position = numpy.array([0.,0.,-5.])
@@ -70,8 +71,12 @@ def zrotmat(angle):
         [math.sin(angle), math.cos(angle), 0],
         [0, 0, 1]
     ]
+def rotate(angle):
+    return numpy.matmul(xrotmat(angle), numpy.matmul(yrotmat(angle), zrotmat(angle)))
 
-# Checks which planet is the dominant planet
+totalRot = numpy.matmul(xrotmat(0), numpy.matmul(yrotmat(0), zrotmat(0)))
+
+# Checks which planet is the dominant planet (to revolve around)
 def findDominantPlanet():
     strongestforce = 0
     global cam_velocity
@@ -81,17 +86,13 @@ def findDominantPlanet():
     for i, planet in enumerate(planets):
         distance = numpy.linalg.norm(cam_position-numpy.array(planet[0]))
         force = planet[2]/(distance*distance)
-        #print(distance)
-
-        if(distance<(planet[1]+playerheight)):
-            isgrounded =True
+        if(distance<=(planet[1]+playerheight) + 0.0001):
+            isgrounded = True
             cam_velocity = numpy.array([0.,0.,0.])
         else:
-            #print(distance)
             cam_velocity -= force*(cam_position-numpy.array(planet[0]))
             ...
-        #print(force*(cam_position-numpy.array(planet[0]))/(distance*fps))
-        if force>strongestforce: 
+        if force > strongestforce: 
             strongestforce = force
             dominantplanet = i
 
@@ -102,7 +103,7 @@ while running:
     screen.fill(background_color)
     # process window events:
     findDominantPlanet()
-    cam_position += cam_velocity / fps
+
     input_dir = numpy.array([0,0,0]) 
     anglechange = numpy.array([0,0,0])
 
@@ -115,68 +116,52 @@ while running:
             running = False
         if event.type == pygame.MOUSEMOTION:
             anglechange = numpy.array(pygame.mouse.get_rel()) / fps * sensitivity
-            look_angle[1] = numpy.clip(look_angle[1]+math.radians(anglechange[1]), -math.pi/2.1, math.pi/2.1)
-            player_angle[0]+=math.radians(anglechange[0])
+            look_angle[1] = numpy.clip(look_angle[1] + math.radians(anglechange[1]), -math.pi/2.1, math.pi/2.1)
+            look_angle[0] -= math.radians(anglechange[0])
 
-    rotation_matrix_x = xrotmat(cam_angle[1])
-    rotation_matrix_y = yrotmat(cam_angle[0])    
-    rotation_matrix_z = zrotmat(cam_angle[2])
-    negrotation_matrix_y = yrotmat(-cam_angle[0])
-    rotation_matrix_yz = numpy.linalg.matmul(rotation_matrix_y, rotation_matrix_z)
-    rotation_matrix_xyz = numpy.linalg.matmul(rotation_matrix_x, rotation_matrix_yz)
-
-    #print(player_angle[1])
-    
-    planetdir = numpy.array(planets[dominantplanet][0]-cam_position)
-    planetxdirnorm = numpy.array([planetdir[2],planetdir[1]])/numpy.linalg.norm(numpy.array([planetdir[2],planetdir[1]]))
-    planetzdirnorm = numpy.array([planetdir[0],planetdir[1]])/numpy.linalg.norm(numpy.array([planetdir[0],planetdir[1]]))
-    #print(planetzdirnorm)
-    #print(numpy.arccos(numpy.clip(numpy.dot( planetzdirnorm,numpy.array([0,1])),-1.0, 1.0)))
-    #print(numpy.arccos(numpy.clip(numpy.dot( planetzdirnorm,numpy.array([0,1])),-1.0, 1.0)))
-    player_angle[1] = numpy.arccos(numpy.clip(numpy.dot( planetxdirnorm,numpy.array([0,1])),-1.0, 1.0))
-    #print()
-    player_angle[2] = numpy.arccos(numpy.clip(numpy.dot( planetzdirnorm,numpy.array([0,1])),-1.0, 1.0))
-    #print(player_angle[2])
-    playerrotation_matrix_xyz = numpy.linalg.matmul(numpy.linalg.matmul(xrotmat(player_angle[1]), negrotation_matrix_y), zrotmat(player_angle[2]))
-
-    #print(numpy.arccos(numpy.clip(numpy.dot( planetxdirnorm,numpy.array([0,1])),-1.0, 1.0)))
-    #print(numpy.arccos(numpy.clip(numpy.dot( numpy.array([0,1]),planetzdirnorm),-1.0, 1.0)))
-    #player_angle[1] -= numpy.arccos(numpy.clip(numpy.dot( numpy.array([0,1]),planetxdirnorm),-1.0, 1.0))
-    #print(numpy.arccos(numpy.clip(numpy.dot( numpy.array([0,1]),planetxdirnorm),-1.0, 1.0)))
-    #cam_angle = player_angle+look_angle
-    #print(player_angle[2])
-    cam_angle = numpy.array(look_angle) -numpy.array(player_angle)
-    #print(numpy.arccos(numpy.clip(numpy.dot( numpy.array([0,1]),planetxdirnorm),-1.0, 1.0)))
-    #print(cam_angle[1])
-    #print (dominantplanet[0]-cam_position)
-    #print(planetxdirnorm)
-    #print(numpy.arccos(numpy.clip(numpy.dot( numpy.array([0,1]),planetxdirnorm),-1.0, 1.0)))
-    #print(numpy.arccos(numpy.clip(numpy.dot (numpy.array([0,1]),planetxdirnorm),-1.0, 1.0)))
-    #print(numpy.arccos(numpy.clip(numpy.dot(planetxdirnorm, numpy.array([0,1])),-1.0, 1.0)))
-    #cam_angle[0] = numpy.arccos(numpy.clip(numpy.dot(numpy.array([planetdir[2],planetdir[1]])/numpy.linalg.norm(numpy.array([planetdir[2],planetdir[1]])), numpy.array([0,1])),-1.0, 1.0))+cam_angle[0]
-    #cam_angle[0]+=xrot
-    #print(numpy.array([planetdir[0],planetdir[2]])/numpy.linalg.norm(numpy.array([planetdir[0],planetdir[2]])))
     pressed_keys = pygame.key.get_pressed()
     if pressed_keys[pygame.K_w]:
-        input_dir[2]+=1
+        input_dir[2] += 1
     if pressed_keys[pygame.K_a]:
-        input_dir[0]+=1
+        input_dir[0] -= 1
     if pressed_keys[pygame.K_s]:
-        input_dir[2]-=1
+        input_dir[2] -= 1
     if pressed_keys[pygame.K_d]:
-        input_dir[0]-=1
-    if((input_dir!=numpy.array([0,0,0])).any() ):
+        input_dir[0] += 1
 
-        #print(numpy.matmul(negrotation_matrix_y,input_dir/(numpy.linalg.norm(input_dir)*fps)*speed))
-        cam_position+=numpy.matmul(playerrotation_matrix_xyz,input_dir/(numpy.linalg.norm(input_dir)*fps)*speed)
-        print(numpy.matmul(playerrotation_matrix_xyz,input_dir/(numpy.linalg.norm(input_dir))*speed))
-        # cam_position+=input_dir/(numpy.linalg.norm(input_dir)*fps)*speed
-    #print(str(cam_position)+" "+str(cam_angle))
-    #print(cam_angle)
+    wanted_position = cam_position + cam_velocity / fps
+    bound_position = planets[dominantplanet][0] + (wanted_position - planets[dominantplanet][0]) * (planets[dominantplanet][1]+playerheight) / numpy.linalg.norm(wanted_position - planets[dominantplanet][0])
+    if numpy.linalg.norm(wanted_position - planets[dominantplanet][0]) > numpy.linalg.norm(bound_position - planets[dominantplanet][0]):
+        cam_position = wanted_position
+    else:
+        cam_position = bound_position
+
+    if ((input_dir != numpy.array([0,0,0])).any()):
+        pos_change = numpy.matmul(totalRot, input_dir/(numpy.linalg.norm(input_dir)) * speed/fps)
+        cam_position -= [pos_change[0], -pos_change[1], -pos_change[2]] 
+    planetdir = numpy.array(planets[dominantplanet][0] - cam_position)
+    player_angle[2] = -math.atan2(planetdir[0], planetdir[1])
+    # player_angle[0] = -math.atan2(planetdir[2], planetdir[1])
+    cam_angle = look_angle - player_angle      
+
+    # print(numpy.linalg.norm(cam_position - planets[dominantplanet][0]))
+    # print(planetdir[2], end=" ")
+    # print(planetdir[1])
+  
+    print(cam_position, end=" ")
+    print(cam_angle)
+    xrot = xrotmat(cam_angle[1])
+    yrot = yrotmat(cam_angle[0])    
+    zrot = zrotmat(cam_angle[2])
+    yreverseRot = yrotmat(-cam_angle[0])
+    yzRot = numpy.matmul(yrot, zrot)
+    totalRot = numpy.matmul(xrot, yzRot)
+
+    # Drawing to screen
     screen_vertices =[]
     for vertice in vertices:
         #renderedvertices = 
-        worldpos = numpy.matmul( rotation_matrix_xyz, vertice-cam_position)
+        worldpos = numpy.matmul(totalRot, vertice-cam_position)
         if(worldpos[2]>0):
             projectedpos =(-worldpos[0]*10000/(worldpos[2]*fov)+screen_width/2, worldpos[1]*10000/(worldpos[2]*fov)+screen_height/2)
 
@@ -195,7 +180,7 @@ while running:
         ]
         pygame.draw.polygon(screen, (255*(i+1)/len(triangles), 100, 100 ), edges)
     for planet in planets:
-        worldpos = numpy.matmul(rotation_matrix_xyz,planet[0]-cam_position)
+        worldpos = numpy.matmul(totalRot,planet[0]-cam_position)
         if(worldpos[2]>0):
             projectedpos =(-worldpos[0]*10000/(worldpos[2]*fov)+screen_width/2, worldpos[1]*10000/(worldpos[2]*fov)+screen_height/2)
             pygame.draw.circle(screen, circle_color, projectedpos, 10000*planet[1]/(worldpos[2]*fov))
