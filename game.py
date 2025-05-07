@@ -54,24 +54,25 @@ planets =[[[0.,10.,0.], 5., .1]] # planet center, radius, gravity
 # Standard Rotation matrices
 def xrotmat(angle):
     return [
-    [1, 0, 0],
+        [1, 0, 0],
         [0, math.cos(angle), -math.sin(angle)],
         [0, math.sin(angle), math.cos(angle)]
     ]
 def yrotmat(angle):
     return [
-    [math.cos(angle), 0, -math.sin(angle)],
+        [math.cos(angle), 0, -math.sin(angle)],
         [0, 1, 0],
         [math.sin(angle), 0, math.cos(angle)]
     ]
 def zrotmat(angle):
     return [
-    [math.cos(angle), -math.sin(angle), 0],
+        [math.cos(angle), -math.sin(angle), 0],
         [math.sin(angle), math.cos(angle), 0],
         [0, 0, 1]
     ]
 
-def checkplanets():
+# Checks which planet is the dominant planet
+def findDominantPlanet():
     strongestforce = 0
     global cam_velocity
     global isgrounded 
@@ -87,28 +88,25 @@ def checkplanets():
             cam_velocity = numpy.array([0.,0.,0.])
         else:
             #print(distance)
-            cam_velocity -= force*(cam_position-numpy.array(planet[0]))/fps
-            #None
+            cam_velocity -= force*(cam_position-numpy.array(planet[0]))
+            ...
         #print(force*(cam_position-numpy.array(planet[0]))/(distance*fps))
         if force>strongestforce: 
             strongestforce = force
             dominantplanet = i
 
-
+# Main Loop
 while running:
     pygame.mouse.set_pos = (screen_width/2, screen_height/2)
     clock.tick(fps)
     screen.fill(background_color)
     # process window events:
-    checkplanets()
-    
-    #cam_angle[0]-=xrot
-    #zrot = unit_vector(v2)
-    #return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
-    #print(cam_angle)
-    cam_position+=cam_velocity
+    findDominantPlanet()
+    cam_position += cam_velocity / fps
     input_dir = numpy.array([0,0,0]) 
     anglechange = numpy.array([0,0,0])
+
+    # Log Inputs
     for event in pygame.event.get():
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
@@ -116,10 +114,10 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEMOTION:
-            anglechange=numpy.array(pygame.mouse.get_rel())/fps*sensitivity
+            anglechange = numpy.array(pygame.mouse.get_rel()) / fps * sensitivity
             look_angle[1] = numpy.clip(look_angle[1]+math.radians(anglechange[1]), -math.pi/2.1, math.pi/2.1)
             player_angle[0]+=math.radians(anglechange[0])
-            #print(cam_angle)
+
     rotation_matrix_x = xrotmat(cam_angle[1])
     rotation_matrix_y = yrotmat(cam_angle[0])    
     rotation_matrix_z = zrotmat(cam_angle[2])
