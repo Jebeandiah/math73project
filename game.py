@@ -19,6 +19,7 @@ ay =0
 lx =0
 cam_position = numpy.array([0.,0.,-5.])
 cam_velocity = numpy.array([0.,0.,0.])
+jump_velocity = 5
 speed = 3
 dominantplanet =0
 # colors:
@@ -43,7 +44,7 @@ vertices = [
 triangles = [[0,1,2],#index of vertices in vertices
              [3,0,2]
             ]  
-planets =[[[0.,-10.,-5.], 5., .1]] #planet center, radius, gravity
+planets =[[[0.,-10.,-5.], 5., 0.1]] #planet center, radius, gravity
 
 def xrotmat(angle):
     return [
@@ -86,17 +87,25 @@ def checkplanets():
         force = planet[2]/(distance*distance)
         #print(distance)
 
-        if(distance<(planet[1]+playerheight)):
-            isgrounded =True
-            cam_velocity = numpy.array([0.,0.,0.])
+        if (distance < (planet[1] + playerheight + 0.05)):
+            if not isgrounded:
+                # Only zero velocity if we were falling
+                radial_dir = cam_position - numpy.array(planet[0])
+                radial_dir /= numpy.linalg.norm(radial_dir)
+                v_radial = numpy.dot(cam_velocity, radial_dir)
+                if v_radial < 0:  # Only cancel velocity if falling in
+                    cam_velocity -= v_radial * radial_dir
+            isgrounded = True
         else:
             #print(distance)
-            cam_velocity -= force*(cam_position-numpy.array(planet[0]))
+            cam_velocity -= force*(cam_position - numpy.array(planet[0]))
             ...
         #print(force*(cam_position-numpy.array(planet[0]))/(distance*fps))
         if force>strongestforce: 
             strongestforce = force
             dominantplanet = i
+        
+        cam_velocity *= 0.99  
 
 
 while running:
@@ -149,6 +158,14 @@ while running:
         input_dir[2]-=1
     if pressed_keys[pygame.K_d]:
         input_dir[0]-=1
+
+    if pressed_keys[pygame.K_SPACE] and isgrounded:
+        # Get the surface normal (pointing away from planet center)
+        direction = cam_position - numpy.array(planets[dominantplanet][0])
+        direction /= numpy.linalg.norm(direction)
+        cam_velocity += jump_velocity * direction
+
+
     if((input_dir!=numpy.array([0,0,0])).any() ):
         cam_position+=numpy.matmul(pmov2wmat,input_dir/(numpy.linalg.norm(input_dir)*fps)*speed)
         #print(numpy.matmul(playerrotation_matrix_xyz,input_dir/(numpy.linalg.norm(input_dir))*speed))
