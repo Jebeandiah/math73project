@@ -114,7 +114,7 @@ my = yrotmat(0)
 playerrotation = yrotmat(0)
 planetdir = -cam_position + planets[dominantplanet][0]
 lplanetdir = planetdir
-pmov2wmat = yrotmat(0)
+p2wmat = yrotmat(0)
 
 while running:
     pygame.mouse.set_pos = (screen_width/2, screen_height/2)
@@ -144,7 +144,7 @@ while running:
     lplanetdir = planetdir
 
     if not isgrounded:
-        localmovedir = numpy.matmul(numpy.matmul(numpy.transpose(pmov2wmat), cam_velocity), yrotmat(0))
+        localmovedir = numpy.matmul(p2wmat, cam_velocity)
         moveym = numpy.matmul(yrotmat(math.atan2(+localmovedir[0],localmovedir[2])), my)
     else:
         moveym = numpy.matmul(yrotmat(math.atan2(input_dir[0], input_dir[2])), my)
@@ -161,14 +161,8 @@ while running:
     
     if (isgrounded):
         pressed_keys = pygame.key.get_pressed()
-        if pressed_keys[pygame.K_w]:
-            input_dir[2]+=1
-        if pressed_keys[pygame.K_a]:
-            input_dir[0]+=1
-        if pressed_keys[pygame.K_s]:
-            input_dir[2]-=1
-        if pressed_keys[pygame.K_d]:
-            input_dir[0]-=1
+        input_dir[2] = pressed_keys[pygame.K_w] - pressed_keys[pygame.K_s]
+        input_dir[0] = pressed_keys[pygame.K_a] - pressed_keys[pygame.K_d]
         if((input_dir!=numpy.array([0,0,0])).any() ):
             cam_velocity += numpy.matmul(pmov2wmat,input_dir/(numpy.linalg.norm(input_dir))*speed)
         if pressed_keys[pygame.K_SPACE]:
@@ -182,9 +176,9 @@ while running:
     #print(planets[dominantplanet][1] + playerheight,end=" ")
     # print(isgrounded, end=" ")
     # print(numpy.linalg.norm(planetdir) < planets[dominantplanet][1] + playerheight)
-    if (numpy.linalg.norm(planetdir) < planets[dominantplanet][1] + playerheight):
+    #if (numpy.linalg.norm(planetdir) < planets[dominantplanet][1] + playerheight):
         # cam_position = planets[dominantplanet][0] - planetdir * (planets[dominantplanet][1] + playerheight + 0.0005) / numpy.linalg.norm(planetdir)
-        ...
+       # ...
     #print(numpy.linalg.norm(planetdir))
     # if (isgrounded and numpy.linalg.norm(planetdir)  < planets[dominantplanet][1] + playerheight):
     #     cam_velocity = numpy.array([0.,0.,0.])
