@@ -15,7 +15,6 @@ sensitivity = 10
 fps = 240
 fov = 30
 w_angle_pspace = [0., 0., 0.]
-ay =0
 lx =0
 cam_position = numpy.array([0.,0.,-5.])
 cam_velocity = numpy.array([0.,0.,0.])
@@ -28,7 +27,7 @@ circle_color = (255, 0, 70)
 isgrounded = False
 playerheight = 2
 running = True
-
+input_dir = numpy.array([0,0,0])
 vertices = [ 
     [-1, -1,1],
     [1, -1, 1],
@@ -43,8 +42,17 @@ vertices = [
 triangles = [[0,1,2],#index of vertices in vertices
              [3,0,2]
             ]  
-planets =[[[0.,-10.,-5.], 5., .1]] #planet center, radius, gravity
+planets =[[[0.,10.,-5.], 5., .1]] #planet center, radius, gravity
+def planetdotgen():
+    for planet in planets:
+        for i in range(2000):
+            point = numpy.random.uniform(-1, 1,(1,3))[0]
+            print(point)
+            point = point/numpy.linalg.norm(point)*planet[1]+planet[0] 
+            #print(point)
+            vertices.append(point)
 
+planetdotgen()
 def xrotmat(angle):
     return [
     [1, 0, 0],
@@ -98,7 +106,9 @@ def checkplanets():
             strongestforce = force
             dominantplanet = i
 
-
+my = yrotmat(0)
+playerrotation = yrotmat(0)
+lplanetdir = numpy.array([0,0,0])
 while running:
     pygame.mouse.set_pos = (screen_width/2, screen_height/2)
     clock.tick(fps)
@@ -111,7 +121,7 @@ while running:
     #return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
     #print(cam_angle)
     cam_position+=cam_velocity/fps
-    input_dir = numpy.array([0,0,0]) 
+    #input_dir = numpy.array([0,0,0]) 
     anglechange = numpy.array([0,0,0])
     for event in pygame.event.get():
         if event.type == pygame.KEYDOWN:
@@ -122,24 +132,22 @@ while running:
         if event.type == pygame.MOUSEMOTION:
             anglechange=numpy.array(pygame.mouse.get_rel())/fps*sensitivity
             lx = numpy.clip(lx+math.radians(anglechange[1]), -math.pi/2.1, math.pi/2.1)
-            ay-=math.radians(anglechange[0])
-            #print(look_angle[0])
-            #print(cam_angle)
-    #negrotation_matrix_xyz = numpy.linalg.matmul(numpy.matmul(xrotmat(0*cam_angle[0]), yrotmat(-cam_angle[1])), zrotmat(0*cam_angle[2]))
-    #print(player_angle[1])
-    
-    dx, dy, dz = planets[dominantplanet][0]-cam_position
-    ax=-math.atan2(dz, dy)
-    dx, dy, dz = numpy.matmul(xrotmat(ax),planets[dominantplanet][0]-cam_position)
-    az = -math.atan2(dx, dy)
-    p2wmat=numpy.matmul(numpy.matmul(yrotmat(ay), zrotmat(-az)), xrotmat(ax))
+            my= numpy.matmul(my, yrotmat(-math.radians(anglechange[0])))
+
+    planetdir = planets[dominantplanet][0]-cam_position
+    movexm = xrotmat(math.acos(numpy.clip(numpy.dot(planetdir, lplanetdir)/(numpy.linalg.norm(planetdir)*numpy.linalg.norm(lplanetdir)),-1, 1 )))
+    moveym = numpy.matmul(yrotmat(math.atan2(input_dir[0], input_dir[2])), my)
+    lplanetdir = planetdir
+    if not numpy.array_equal(input_dir,numpy.array([0,0,0])):
+        playerrotation = numpy.matmul(numpy.matmul(numpy.matmul(numpy.transpose(moveym),movexm ), moveym), playerrotation)
+   
+    p2wmat = numpy.matmul(my, playerrotation)
     pmov2wmat = numpy.transpose(p2wmat)
-    #pmov2wmat = numpy.transpose((numpy.matmul(numpy.matmul(zrotmat(-ay), xrotmat(ax)), zrotmat(az))))
     c2wmat = numpy.matmul(xrotmat(lx),p2wmat )
    
-    drawaxes(pmov2wmat)
+    drawaxes(numpy.transpose(numpy.matmul(my, playerrotation)))
     
-
+    input_dir = numpy.array([0,0,0])
     pressed_keys = pygame.key.get_pressed()
     if pressed_keys[pygame.K_w]:
         input_dir[2]+=1
@@ -177,7 +185,7 @@ while running:
         worldpos = numpy.matmul(c2wmat,planet[0]-cam_position)
         if(worldpos[2]>0):
             projectedpos =(-worldpos[0]*10000/(worldpos[2]*fov)+screen_width/2, worldpos[1]*10000/(worldpos[2]*fov)+screen_height/2)
-            pygame.draw.circle(screen, circle_color, projectedpos, 10000*planet[1]/(worldpos[2]*fov))
+            #pygame.draw.circle(screen, circle_color, projectedpos, 10000*planet[1]/(worldpos[2]*fov))
 
 
     pygame.display.update()
