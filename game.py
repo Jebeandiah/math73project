@@ -20,6 +20,8 @@ cam_position = numpy.array([0.,0.,-5.])
 cam_velocity = numpy.array([0.,0.,0.])
 speed = 8
 dominantplanet =0
+targetplanet = dominantplanet
+
 # colors:
 #background_color = (240, 235, 240)
 background_color = (20, 20, 20)
@@ -44,7 +46,8 @@ triangles = [[0,1,2],#index of vertices in vertices
              [3,0,2]
             ]  
 planets =[[[0.,10.,-5.], 5., 0.2],
-          [[10.,20.,20.], 8., 0.25]] #planet center, radius, gravity
+          [[10.,20.,20.], 8., 0.25],
+          [[0.,0.,10.], 3.5, 0.15]] #planet center, radius, gravity
 def planetdotgen():
     for planet in planets:
         for i in range(500):
@@ -95,7 +98,6 @@ while running:
     clock.tick(fps)
     screen.fill(background_color)
 
-    ldominantplanet = dominantplanet
     strongestforce =0
     isgrounded = False
 
@@ -110,11 +112,11 @@ while running:
         if force>strongestforce: 
             strongestforce = force
             dominantplanet = i
-    if(ldominantplanet!=dominantplanet):
+    if(targetplanet!=dominantplanet):
         switched_planets = True
     if(isgrounded):
         cam_position = planets[dominantplanet][0] - planetdir * (planets[dominantplanet][1] + playerheight -.01) / numpy.linalg.norm(planetdir)
-    print(isgrounded)
+    print(switched_planets)
 
     anglechange = numpy.array([0,0,0])
     for event in pygame.event.get():
@@ -128,7 +130,8 @@ while running:
             lx = numpy.clip(lx+math.radians(anglechange[1]), -math.pi/2.1, math.pi/2.1)
             my= numpy.matmul(my, yrotmat(-math.radians(anglechange[0])))
     
-    if switched_planets:
+    if switched_planets and isgrounded:
+        lx=0
         dx, dy, dz = planets[dominantplanet][0]-cam_position
         lplanetdir = planets[dominantplanet][0]-cam_position
         ax=-math.atan2(dz, dy)
@@ -136,7 +139,11 @@ while running:
         az = -math.atan2(dx, dy)
         playerrotation = numpy.matmul(zrotmat(-az), xrotmat(ax))
         switched_planets = False
+        targetplanet = dominantplanet
     else:
+        if(switched_planets):
+            planetdir =  planets[targetplanet][0] - cam_position
+            #print("ye")
         movexm = xrotmat(math.acos(numpy.clip(numpy.dot(planetdir, lplanetdir)/(numpy.linalg.norm(planetdir)*numpy.linalg.norm(lplanetdir)),-1, 1 )))
         #print(math.acos(numpy.clip(numpy.dot(planetdir, lplanetdir)/(numpy.linalg.norm(planetdir)*numpy.linalg.norm(lplanetdir)),-1, 1 )))
         lplanetdir = planetdir
