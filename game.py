@@ -148,7 +148,7 @@ while running:
             running = False
         if event.type == pygame.MOUSEMOTION:
             mouse = pygame.mouse.get_rel()
-            cx = numpy.clip(cx+math.radians(mouse[1]*sensitivity), -math.pi/2., math.pi/2.)
+            cx = numpy.clip(cx+math.radians(mouse[1]*sensitivity), -math.pi/2.01, math.pi/2.01)
             dpy -=math.radians(mouse[0]*sensitivity)
             #print(mouse, end=" ")
            # print(py, end=" ")
