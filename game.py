@@ -2,7 +2,7 @@ import pygame
 import math
 import numpy
 
-screen_width, screen_height = 800, 600
+screen_width, screen_height = 1200, 800
 
 # init pygame settings:
 pygame.init()
@@ -15,9 +15,9 @@ sensitivity = 0.09
 fps = 60
 fov = 30
 w_angle_pspace = [0., 0., 0.]
-lx =0
-cam_position = numpy.array([0.,0.,-5.])
-cam_velocity = numpy.array([0.,0.,0.])
+cx =0
+cam_position = numpy.array([0.,0.,0.])
+cam_velocity = numpy.array([0.,0.,2.])
 speed = 8
 dominantplanet =0
 targetplanet = dominantplanet
@@ -45,9 +45,9 @@ vertices = [
 triangles = [[0,1,2],#index of vertices in vertices
              [3,0,2]
             ]  
-planets =[[[0.,10.,-5.], 5., 0.2],
-          [[10.,20.,20.], 8., 0.25],
-          [[0.,0.,10.], 3.5, 0.15]] #planet center, radius, gravity
+planets =[[[1.,10.,1.], 5., 0.2],
+    [[10.,20.,20.], 8., 0.25] ] #planet center, radius, gravity
+#[[10.,20.,20.], 8., 0.25],[[0.,0.,10.], 3.5, 0.15]
 def planetdotgen():
     for planet in planets:
         for i in range(500):
@@ -76,8 +76,6 @@ def zrotmat(angle):
         [0, 0, 1]
     ]
 
-def xyzrotmat(angles):
-    return numpy.matmul(numpy.matmul(xrotmat(angles[0]), yrotmat(angles[1])), zrotmat(angles[2]))
 def drawaxes(rmat):
     #origin = numpy.matmul(rmat, numpy.array([0,0,2]))
     origin = numpy.array([0,0,2])
@@ -91,34 +89,50 @@ my = yrotmat(0)
 playerrotation = yrotmat(0)
 planetdir = -cam_position + planets[dominantplanet][0]
 lplanetdir = planetdir
-p2wmat = yrotmat(0)
-switched_planets = False
+p2wmat = numpy.eye(3)
+switched_planets = True
+lcamvel =numpy.array([0,0,2])
+apy=0
+lmovang =0
+landingangle =0
+lmovdir = numpy.array([0,0,1])
+R = numpy.eye(3)
+nullvoffset =0
 while running:
+
     pygame.mouse.set_pos = (screen_width/2, screen_height/2)
     clock.tick(fps)
     screen.fill(background_color)
 
     strongestforce =0
+    wasgrounded = isgrounded
     isgrounded = False
+    #print(str(lcamvel)+" hehe", end=" ")
 
     for i, planet in enumerate(planets):
         distance = numpy.linalg.norm(cam_position-planet[0])
         force = planet[2]/(distance*distance)
         if(distance <= planet[1]+playerheight):
             isgrounded =True
-            cam_velocity = numpy.array([0.,0.,0.])
+            
         else:
             cam_velocity -= force*(cam_position-numpy.array(planet[0]))
         if force>strongestforce: 
             strongestforce = force
             dominantplanet = i
     if(targetplanet!=dominantplanet):
+        #print("switch")
         switched_planets = True
     if(isgrounded):
+        targetplanet = dominantplanet
+        switched_planets = False
+        cam_velocity = numpy.array([0.,0.,0.])
         cam_position = planets[dominantplanet][0] - planetdir * (planets[dominantplanet][1] + playerheight -.01) / numpy.linalg.norm(planetdir)
-    print(switched_planets)
+    #print(switched_planets)
+    #print(lcamvel)
 
     anglechange = numpy.array([0,0,0])
+    dpy = 0
     for event in pygame.event.get():
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
@@ -126,67 +140,129 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEMOTION:
-            anglechange=numpy.array(pygame.mouse.get_rel())*sensitivity
-            lx = numpy.clip(lx+math.radians(anglechange[1]), -math.pi/2.1, math.pi/2.1)
-            my= numpy.matmul(my, yrotmat(-math.radians(anglechange[0])))
+            mouse = pygame.mouse.get_rel()
+            cx = numpy.clip(cx+math.radians(mouse[1]*sensitivity), -math.pi/2., math.pi/2.)
+            dpy -=math.radians(mouse[0]*sensitivity)
+            #print(mouse, end=" ")
+           # print(py, end=" ")
+            #my= yrotmat(-math.radians(anglechange[0]))
+            #my = yrotmat(math.pi/2)
     
-    if switched_planets and isgrounded:
-        lx=0
-        dx, dy, dz = planets[dominantplanet][0]-cam_position
-        lplanetdir = planets[dominantplanet][0]-cam_position
-        ax=-math.atan2(dz, dy)
-        dx, dy, dz = numpy.matmul(xrotmat(ax),planets[dominantplanet][0]-cam_position)
-        az = -math.atan2(dx, dy)
-        playerrotation = numpy.matmul(zrotmat(-az), xrotmat(ax))
-        switched_planets = False
-        targetplanet = dominantplanet
-    else:
-        if(switched_planets):
-            planetdir =  planets[targetplanet][0] - cam_position
-            #print("ye")
-        movexm = xrotmat(math.acos(numpy.clip(numpy.dot(planetdir, lplanetdir)/(numpy.linalg.norm(planetdir)*numpy.linalg.norm(lplanetdir)),-1, 1 )))
-        #print(math.acos(numpy.clip(numpy.dot(planetdir, lplanetdir)/(numpy.linalg.norm(planetdir)*numpy.linalg.norm(lplanetdir)),-1, 1 )))
-        lplanetdir = planetdir
-
-        if not isgrounded:
-            localmovedir = numpy.matmul(p2wmat, cam_velocity)
-            moveym = numpy.matmul(yrotmat(math.atan2(+localmovedir[0],localmovedir[2])), my)
-        else:
-            moveym = numpy.matmul(yrotmat(math.atan2(input_dir[0], input_dir[2])), my)
-
-
-        playerrotation = numpy.matmul(numpy.matmul(numpy.matmul(numpy.transpose(moveym),movexm ), moveym), playerrotation)
-   
-    p2wmat = numpy.matmul(my, playerrotation)
-    pmov2wmat = numpy.transpose(p2wmat)
-    c2wmat = numpy.matmul(xrotmat(lx),p2wmat )
-   
-    drawaxes(numpy.transpose(numpy.matmul(my, playerrotation)))
     input_dir = numpy.array([0.,0.,0.]) 
-    
     if (isgrounded):
+        nullvoffset =0
         pressed_keys = pygame.key.get_pressed()
         input_dir[2] = pressed_keys[pygame.K_w] - pressed_keys[pygame.K_s]
         input_dir[0] = pressed_keys[pygame.K_a] - pressed_keys[pygame.K_d]
         if((input_dir!=numpy.array([0,0,0])).any() ):
+            apy =0
             cam_velocity += numpy.matmul(pmov2wmat,input_dir/(numpy.linalg.norm(input_dir))*speed)
-        if pressed_keys[pygame.K_SPACE]:
+            lmovdir = input_dir
+            lmovang = -math.atan2(input_dir[0], input_dir[2])
+            #print(lcamvel)
+            #lcamvel = cam_velocity/fps
+        if pressed_keys[pygame.K_SPACE] and wasgrounded:
+            
             cam_velocity *= 0.3
             cam_velocity += planetdir/numpy.linalg.norm(planetdir)*-2
     cam_position += cam_velocity/fps
+    if((input_dir==numpy.array([0,0,0])).all()):
+        #print(apy)
+        apy+= dpy
+    
+    yoffset = dpy+apy +lmovang
+    #print(anglechange)S
+    #lcamvel = numpy.matmul(numpy.transpose(my), lcamvel)
+    #lcamvel = numpy.matmul(my, lcamvel)
+    tpdir = planetdir = planets[targetplanet][0] - cam_position
 
+    newup = tpdir / numpy.linalg.norm(tpdir)
+   
+    newf =cam_velocity -numpy.dot(cam_velocity,newup)*newup
+
+    if numpy.linalg.norm(newf) <  1e-6:
+        newf = lcamvel-numpy.dot(lcamvel,newup)*newup
+
+    else:
+        lcamvel = numpy.copy(cam_velocity)
+    #print(newf)
+    newf /= numpy.linalg.norm(newf)
+    #print(newf)
+    #print(yoffset)
+    
+    
+
+    if isgrounded:
+
+        f = yrotmat(yoffset) @ numpy.array([0, 0, 1])
+        up = numpy.array([0, 1, 0])
+        # if not isgrounded:
+        #     print(newf, end=" ")
+        #     newf = newf-numpy.dot(newf,p2wmat.T@l)*p2wmat.T@newup
+        #     print(newf)
+        #     newf /= numpy.linalg.norm(newf)
+        if  not wasgrounded:
+            wasgrounded = True
+            f= numpy.array([0, 0, 1])
+            l= numpy.array([1, 0, 0])
+            olddir = c2wmat.T@f
+            newf = olddir - numpy.dot(olddir, newup)*newup
+            newlook = olddir - numpy.dot(olddir, l)*l
+            newf/=numpy.linalg.norm(newf)
+            lcamvel = numpy.copy(newf)
+            cam_velocity = numpy.copy(newf)
+            apy -= yoffset
+            cx=-math.acos(numpy.clip(numpy.dot(newlook, newup)/(numpy.linalg.norm(newf)*numpy.linalg.norm(newlook)),-1, 1 ))+math.pi/2
+            print(cx)
+        l = numpy.cross(f, up)
+
+
+        lmy = my
+        #print(newf, end=" ")
+        newl = numpy.cross(newf, newup)
+        U = numpy.column_stack((f, up, l))
+        V = numpy.column_stack((newf, newup, newl))
+        # if numpy.sign(numpy.linalg.det(V)) != numpy.sign(numpy.linalg.det(U)):
+        #     U[:, 2] *= -1  
+
+
+        p2wmat = U @ V.T
+        #olddir = p2wmat@c2wmat@p2wmat.T@f
+        #ydif = yrotmat(-math.atan2(olddir[0], 1))
+        #print(olddir, end = " ")
+        #print(f)
+
+      
+        playerrotation = yrotmat(-apy)@p2wmat
+
+    else:
+        movexm = xrotmat(math.acos(numpy.clip(numpy.dot(planetdir, lplanetdir)/(numpy.linalg.norm(planetdir)*numpy.linalg.norm(lplanetdir)),-1, 1 )))
+        localmovedir = numpy.matmul(p2wmat, lcamvel)
+        moveym = yrotmat(math.atan2(+localmovedir[0],localmovedir[2])+apy)
+  
+        playerrotation = numpy.matmul(numpy.matmul(numpy.matmul(numpy.transpose(moveym),movexm ), moveym), playerrotation)
+        #playerrotation = p2wmat@movexm@p2wmat.T@playerrotation
+
+        p2wmat = numpy.matmul(yrotmat(apy), playerrotation)
+    lplanetdir = planetdir        
+
+    # planetdir = planets[dominantplanet][0]-cam_position
+    # movexm = xrotmat(math.acos(numpy.clip(numpy.dot(planetdir, lplanetdir)/(numpy.linalg.norm(planetdir)*numpy.linalg.norm(lplanetdir)),-1, 1 )))
+    # moveym = numpy.matmul(yrotmat(math.atan2(input_dir[0], input_dir[2])), my)
+    # lplanetdir = planetdir
+    # if not numpy.array_equal(input_dir,numpy.array([0,0,0])):
+    #     playerrotation = numpy.matmul(numpy.matmul(numpy.matmul(numpy.transpose(moveym),movexm ), moveym), playerrotation)
+   
+    # p2wmat = numpy.matmul(my, playerrotation)
+    pmov2wmat = p2wmat.T
+    #pmov2wmat = p2wmat
+    c2wmat = numpy.matmul(xrotmat(cx),p2wmat )
+    drawaxes(pmov2wmat)
+    
+   
     
     planetdir = planets[dominantplanet][0] - cam_position
-    #print(numpy.linalg.norm(planetdir),end=" ")
-    #print(planets[dominantplanet][1] + playerheight,end=" ")
-    # print(isgrounded, end=" ")
-    # print(numpy.linalg.norm(planetdir) < planets[dominantplanet][1] + playerheight)
-    #if (numpy.linalg.norm(planetdir) < planets[dominantplanet][1] + playerheight):
-        # cam_position = planets[dominantplanet][0] - planetdir * (planets[dominantplanet][1] + playerheight + 0.0005) / numpy.linalg.norm(planetdir)
-       # ...
-    #print(numpy.linalg.norm(planetdir))
-    # if (isgrounded and numpy.linalg.norm(planetdir)  < planets[dominantplanet][1] + playerheight):
-    #     cam_velocity = numpy.array([0.,0.,0.])
+
 
     screen_vertices =[]
     for vertice in vertices:
@@ -217,5 +293,8 @@ while running:
 
 
     pygame.display.update()
+    # if not wasgrounded and isgrounded:
+    #     wasgrounded = True
+    #     clock.tick(0.6)
 
 pygame.quit()
