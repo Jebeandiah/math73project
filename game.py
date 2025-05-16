@@ -24,7 +24,7 @@ targetplanet = dominantplanet
 
 # colors:
 #background_color = (240, 235, 240)
-background_color = (20, 20, 20)
+background_color = (20, 15, 25)
 cube_color = (255, 0, 70)
 circle_color = (255, 0, 70)
 isgrounded = False
@@ -45,8 +45,13 @@ vertices = [
 triangles = [[0,1,2],#index of vertices in vertices
              [3,0,2]
             ]  
-planets =[[[1.,10.,1.], 5., 0.2],
-    [[10.,20.,20.], 8., 0.25] ] #planet center, radius, gravity
+planets = [
+    [[0., 10., -5.], 5., 0.2, (255, 100, 100)],     # reddish
+    [[10., 20., 20.], 8., 0.25, (100, 255, 100)],   # greenish
+    [[0., 0., 10.], 3.5, 0.15, (100, 100, 255)]     # bluish
+]
+planet_colors = []
+
 #[[10.,20.,20.], 8., 0.25],[[0.,0.,10.], 3.5, 0.15]
 def planetdotgen():
     for planet in planets:
@@ -55,6 +60,8 @@ def planetdotgen():
             point = point/numpy.linalg.norm(point)*planet[1]+planet[0] 
             #print(point)
             vertices.append(point)
+            planet_colors.append(planet[3])
+
 
 planetdotgen()
 def xrotmat(angle):
@@ -207,12 +214,13 @@ while running:
             l= numpy.array([1, 0, 0])
             olddir = c2wmat.T@f
             newf = olddir - numpy.dot(olddir, newup)*newup
-            newlook = olddir - numpy.dot(olddir, l)*l
+            #newlook = olddir - numpy.dot(olddir, l)*l
             newf/=numpy.linalg.norm(newf)
             lcamvel = numpy.copy(newf)
             cam_velocity = numpy.copy(newf)
             apy -= yoffset
-            cx=-math.acos(numpy.clip(numpy.dot(newlook, newup)/(numpy.linalg.norm(newf)*numpy.linalg.norm(newlook)),-1, 1 ))+math.pi/2
+           #cx=-math.acos(numpy.clip(numpy.dot(newlook, newup)/(numpy.linalg.norm(newf)*numpy.linalg.norm(newlook)),-1, 1 ))+math.pi/2
+            cx = math.acos(numpy.clip(numpy.dot(olddir, newf)/(numpy.linalg.norm(olddir)),-1, 1 ))
             print(cx)
         l = numpy.cross(f, up)
 
@@ -265,15 +273,17 @@ while running:
 
 
     screen_vertices =[]
-    for vertice in vertices:
+    for i, vertice in enumerate(vertices):
         #renderedvertices = 
         worldpos = numpy.matmul( c2wmat, vertice-cam_position)
         if(worldpos[2]>0):
             projectedpos =(-worldpos[0]*10000/(worldpos[2]*fov)+screen_width/2, worldpos[1]*10000/(worldpos[2]*fov)+screen_height/2)
 
             screen_vertices.append(projectedpos)
-
-            pygame.draw.circle(screen, circle_color, projectedpos, numpy.clip(400/(worldpos[2]*fov),1, 1000))
+            if i >= 8:  # skip cube vertices
+                pygame.draw.circle(screen, planet_colors[i - 8], projectedpos, numpy.clip(400 / (worldpos[2] * fov), 1, 1000))
+            else:
+                pygame.draw.circle(screen, circle_color, projectedpos, numpy.clip(400/(worldpos[2]*fov),1, 1000))
         else:
             worldpos[2]=0.01
             screen_vertices.append((-worldpos[0]*10000/(worldpos[2]*fov)+screen_width/2, worldpos[1]*10000/(worldpos[2]*fov)+screen_height/2))
